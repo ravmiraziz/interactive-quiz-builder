@@ -130,7 +130,12 @@ export function useQuiz() {
     // Crop or pick subset of questions
     if (activeSettings.questionMode === 'subset' && activeSettings.subsetCount && activeSettings.subsetCount > 0) {
       const targetCount = activeSettings.subsetCount;
-      if (activeSettings.subsetOrder === 'random') {
+      if (activeSettings.chunkMode || (activeSettings.activeChunkIndex !== undefined && activeSettings.activeChunkIndex > 0)) {
+        const chunkIdx = activeSettings.activeChunkIndex || 0;
+        const start = chunkIdx * targetCount;
+        const end = start + targetCount;
+        subsetPool = subsetPool.slice(start, end);
+      } else if (activeSettings.subsetOrder === 'random') {
         subsetPool = shuffle(subsetPool).slice(0, targetCount);
       } else {
         subsetPool = subsetPool.slice(0, targetCount);

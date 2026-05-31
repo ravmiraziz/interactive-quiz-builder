@@ -18,6 +18,8 @@ export interface QuizSettings {
   subsetCount?: number;
   subsetOrder?: 'sequential' | 'random';
   solvingTemplate?: 'slide' | 'scroll'; // slide/classic or scroll/list
+  chunkMode?: boolean; // enable solving in customized sequential blocks
+  activeChunkIndex?: number; // 0-based chunk/block index
 }
 
 export interface QuizState {

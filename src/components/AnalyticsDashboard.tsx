@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { RefreshCw, ArrowLeft, CheckCircle, XCircle, Clock, Award, Filter, BarChart3, HelpCircle } from 'lucide-react';
-import { Question } from '../types/quiz';
+import { Question, QuizSettings } from '../types/quiz';
 import { ThemeConfig } from '../App';
+import { ChevronRight } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
   getResultsSummary: () => {
@@ -22,6 +23,9 @@ interface AnalyticsDashboardProps {
   onRestart: () => void;
   onBackToUpload: () => void;
   theme?: ThemeConfig;
+  settings?: QuizSettings;
+  totalQuestionsPoolCount?: number;
+  onNextBlock?: () => void;
 }
 
 export default function AnalyticsDashboard({
@@ -29,6 +33,9 @@ export default function AnalyticsDashboard({
   onRestart,
   onBackToUpload,
   theme,
+  settings,
+  totalQuestionsPoolCount = 0,
+  onNextBlock,
 }: AnalyticsDashboardProps) {
   const [activeFilter, setActiveFilter] = useState<'all' | 'correct' | 'incorrect'>('all');
   const results = useMemo(() => getResultsSummary(), [getResultsSummary]);
@@ -134,13 +141,20 @@ export default function AnalyticsDashboard({
           {/* Core result title / copy */}
           <div className="md:col-span-3 space-y-4 text-center md:text-left">
             <div className="space-y-2">
-              <span className={`inline-flex px-3 py-1 rounded-lg text-[10px] font-bold tracking-wider font-mono uppercase border ${
-                isPassed
-                  ? 'bg-emerald-500/10 text-emerald-555 text-emerald-500 border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-              }`}>
-                {isPassed ? 'Muvaffaqiyatli o‘tdingiz / PASSED' : 'Yetarli ball to‘planmadi / FAILED'}
-              </span>
+              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                <span className={`inline-flex px-3 py-1 rounded-lg text-[10px] font-bold tracking-wider font-mono uppercase border ${
+                  isPassed
+                    ? 'bg-emerald-500/10 text-emerald-555 text-emerald-500 border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                }`}>
+                  {isPassed ? 'Muvaffaqiyatli o‘tdingiz / PASSED' : 'Yetarli ball to‘planmadi / FAILED'}
+                </span>
+                {settings?.chunkMode && settings?.questionMode === 'subset' && (
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[10px] font-bold tracking-wider font-mono uppercase border bg-indigo-500/10 text-indigo-400 border-indigo-500/20 ${t.badgeBg}`}>
+                    🧩 {settings.activeChunkIndex !== undefined ? settings.activeChunkIndex + 1 : 1}-blok ({((settings.activeChunkIndex || 0) * (settings?.subsetCount || 25)) + 1}-{Math.min(totalQuestionsPoolCount, ((settings.activeChunkIndex || 0) + 1) * (settings?.subsetCount || 25))})
+                  </span>
+                )}
+              </div>
               <h2 className={`font-sans font-black text-2xl sm:text-3xl tracking-tight leading-tight ${t.textHeading}`}>
                 {isPassed ? 'Tabriklaymiz! Test yakunlandi' : 'Natija yetarli emas. Yana urinib ko‘ring'}
               </h2>
@@ -153,20 +167,50 @@ export default function AnalyticsDashboard({
 
             {/* Quick interactive action buttons */}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
-              <button
-                onClick={onRestart}
-                className={`flex items-center gap-2 font-black font-sans text-xs px-5 py-3.5 rounded-2xl transition-all cursor-pointer shadow-sm select-none ${restartBtnClass}`}
-                id="btn-restart-quiz"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Qayta topshirish / Retake
-              </button>
+              {(() => {
+                const size = settings?.subsetCount || 25;
+                const activeChunkIndex = settings?.activeChunkIndex || 0;
+                const hasNextBlock = settings?.questionMode === 'subset' && settings?.chunkMode && ((activeChunkIndex + 1) * size < totalQuestionsPoolCount);
+
+                return (
+                  <>
+                    {hasNextBlock && onNextBlock && (
+                      <button
+                        onClick={onNextBlock}
+                        className={`flex items-center gap-2 font-black font-sans text-xs px-6 py-3.5 rounded-2xl transition-all cursor-pointer shadow-lg hover:scale-[1.02] active:scale-[0.98] select-none ${
+                          t.accentColor.includes('emerald')
+                            ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                            : t.accentColor.includes('amber')
+                              ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 font-bold'
+                              : 'bg-indigo-650 bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-950/40'
+                        }`}
+                        id="btn-next-chunk-block"
+                      >
+                        <ChevronRight className="w-4 h-4 text-current shrink-0" />
+                        <span>
+                          Keyingi blokni boshlash: {activeChunkIndex + 2}-blok ({(activeChunkIndex + 1) * size + 1}-{Math.min(totalQuestionsPoolCount, (activeChunkIndex + 2) * size)})
+                        </span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={onRestart}
+                      className={`flex items-center gap-2 font-black font-sans text-xs px-5 py-3.5 rounded-2xl transition-all cursor-pointer shadow-sm select-none ${restartBtnClass}`}
+                      id="btn-restart-quiz"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                      Qayta topshirish / Retake
+                    </button>
+                  </>
+                );
+              })()}
+              
               <button
                 onClick={onBackToUpload}
                 className={`flex items-center gap-2 border text-slate-300 hover:text-white font-semibold font-sans text-xs px-5 py-3.5 rounded-2xl transition-all cursor-pointer ${t.innerBg} ${t.borderColor}`}
                 id="btn-upload-new"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
                 Yangi test yuklash / Change File
               </button>
             </div>

@@ -143,6 +143,8 @@ export default function App() {
           subsetCount: 25,
           subsetOrder: 'random',
           solvingTemplate: 'slide',
+          chunkMode: false,
+          activeChunkIndex: 0,
           ...parsed,
         };
       }
@@ -158,6 +160,8 @@ export default function App() {
       subsetCount: 25,
       subsetOrder: 'random',
       solvingTemplate: 'slide',
+      chunkMode: false,
+      activeChunkIndex: 0,
     };
   });
 
@@ -230,6 +234,17 @@ export default function App() {
   const handleRestartQuiz = () => {
     if (!parsedResult) return;
     quiz.startQuiz(parsedResult.questions, settings);
+  };
+
+  const handleNextBlock = () => {
+    if (!parsedResult) return;
+    const nextChunkIndex = (settings.activeChunkIndex || 0) + 1;
+    const updatedSettings = {
+      ...settings,
+      activeChunkIndex: nextChunkIndex,
+    };
+    setSettings(updatedSettings);
+    quiz.startQuiz(parsedResult.questions, updatedSettings);
   };
 
   const t = THEMES[activeTheme];
@@ -487,7 +502,16 @@ export default function App() {
                             <button
                               key={num}
                               type="button"
-                              onClick={() => setSettings({ ...settings, subsetCount: num })}
+                              onClick={() => {
+                                const total = parsedResult?.questions.length || 0;
+                                const maxCh = Math.ceil(total / num);
+                                const currentIdx = settings.activeChunkIndex || 0;
+                                setSettings({
+                                  ...settings,
+                                  subsetCount: num,
+                                  activeChunkIndex: currentIdx >= maxCh ? 0 : currentIdx,
+                                });
+                              }}
                               className={`py-1.5 px-3 rounded-xl border text-[10px] font-bold cursor-pointer transition-colors ${
                                 settings.subsetCount === num
                                   ? activeTheme === 'zinc' ? 'bg-zinc-900 border-zinc-900 text-white' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400'
@@ -503,7 +527,17 @@ export default function App() {
                               min={1}
                               max={parsedResult?.questions.length || 100}
                               value={settings.subsetCount || 25}
-                              onChange={(e) => setSettings({ ...settings, subsetCount: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                              onChange={(e) => {
+                                const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                const total = parsedResult?.questions.length || 0;
+                                const maxCh = Math.ceil(total / val);
+                                const currentIdx = settings.activeChunkIndex || 0;
+                                setSettings({
+                                  ...settings,
+                                  subsetCount: val,
+                                  activeChunkIndex: currentIdx >= maxCh ? 0 : currentIdx,
+                                });
+                              }}
                               className={`w-full text-[11px] font-mono font-bold text-center py-1.5 pr-6 pl-2 rounded-xl transition-all select-all focus:outline-none focus:ring-1 ${
                                 activeTheme === 'zinc'
                                   ? 'bg-zinc-100 border border-zinc-200 text-zinc-900 focus:ring-zinc-400'
@@ -515,7 +549,7 @@ export default function App() {
                         </div>
 
                         {/* Order pick within slice */}
-                        <div className="pt-2 flex items-center justify-between border-t border-slate-500/5">
+                        <div className="pt-2 flex items-center justify-between border-t border-slate-500/5 font-sans">
                           <span className="text-[10px] text-slate-400 font-semibold">Tanlab olish uslubi:</span>
                           <div className="flex gap-1.5">
                             <button
@@ -531,16 +565,85 @@ export default function App() {
                             </button>
                             <button
                               type="button"
+                              disabled={!!settings.chunkMode}
                               onClick={() => setSettings({ ...settings, subsetOrder: 'random' })}
-                              className={`px-2.5 py-1 rounded-xl text-[9px] font-mono font-bold tracking-wider uppercase border cursor-pointer transition-colors ${
+                              className={`px-2.5 py-1 rounded-xl text-[9px] font-mono font-bold tracking-wider uppercase border cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                                 settings.subsetOrder === 'random'
                                   ? activeTheme === 'zinc' ? 'bg-zinc-200 text-zinc-900 border-zinc-300' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-300'
                                   : 'border-transparent text-slate-500 hover:text-slate-400'
                               }`}
+                              title={settings.chunkMode ? "Blokli rejimda faqat ketma-ket tartibda ishlash mumkin" : ""}
                             >
                               Tasodifiy
                             </button>
                           </div>
+                        </div>
+
+                        {/* Optional block-based solving partition */}
+                        <div className="pt-2.5 border-t border-slate-500/5 space-y-2 font-sans">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-350">Bloklarga bo&apos;lib yechish (Chunk mode)</p>
+                              <p className="text-[9px] text-slate-450 leading-normal">
+                                Savollarni guruh-guruh o&apos;rganish rejimi (Ixtiyoriy)
+                              </p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer select-none shrink-0 scale-90">
+                              <input
+                                type="checkbox"
+                                checked={!!settings.chunkMode}
+                                onChange={(e) => {
+                                  setSettings({
+                                    ...settings,
+                                    chunkMode: e.target.checked,
+                                    subsetOrder: e.target.checked ? 'sequential' : settings.subsetOrder,
+                                    activeChunkIndex: 0,
+                                  });
+                                }}
+                                className="sr-only peer"
+                              />
+                              <div className="w-10 h-6 bg-slate-300 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-650 peer-checked:bg-indigo-600 peer-checked:after:bg-white" />
+                            </label>
+                          </div>
+
+                          {settings.chunkMode && (
+                            <div className="space-y-2 pt-1 animate-fade-in pl-1">
+                              <p className="text-[9px] text-slate-400 font-semibold">Boshlamoqchi bo&apos;lgan guruh / blokni tanlang:</p>
+                              <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1" id="config-blocks-selector">
+                                {(() => {
+                                  const totalQuestionsCount = parsedResult?.questions.length || 0;
+                                  const size = settings.subsetCount || 25;
+                                  const totalChunks = Math.ceil(totalQuestionsCount / size);
+
+                                  return Array.from({ length: totalChunks }).map((_, chunkIdx) => {
+                                    const startQ = chunkIdx * size + 1;
+                                    const endQ = Math.min(totalQuestionsCount, (chunkIdx + 1) * size);
+                                    const isSelected = (settings.activeChunkIndex || 0) === chunkIdx;
+
+                                    return (
+                                      <button
+                                        key={chunkIdx}
+                                        type="button"
+                                        onClick={() => setSettings({ ...settings, activeChunkIndex: chunkIdx })}
+                                        className={`py-1.5 px-2 rounded-xl text-[10px] font-mono border text-left cursor-pointer transition-all duration-150 ${
+                                          isSelected
+                                            ? activeTheme === 'zinc'
+                                              ? 'bg-zinc-900 border-zinc-900 text-white font-black'
+                                              : `${t.accentBg} font-black`
+                                            : 'bg-transparent border-slate-500/10 text-slate-450 hover:border-slate-500/35 hover:text-slate-200'
+                                        }`}
+                                      >
+                                        <div className="flex justify-between items-center w-full">
+                                          <span className="font-sans font-bold">Blok {chunkIdx + 1}</span>
+                                          <span className="text-[9px] opacity-80 font-mono">({startQ}-{endQ})</span>
+                                        </div>
+                                      </button>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -760,6 +863,9 @@ export default function App() {
               onRestart={handleRestartQuiz}
               onBackToUpload={clearUploadedFile}
               theme={t}
+              settings={settings}
+              totalQuestionsPoolCount={parsedResult?.questions.length || 0}
+              onNextBlock={handleNextBlock}
             />
           </div>
         )}
