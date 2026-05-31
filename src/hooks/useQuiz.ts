@@ -6,6 +6,8 @@ const DEFAULT_SETTINGS: QuizSettings = {
   shuffleQuestions: false,
   shuffleOptions: true,
   passingScore: 60,
+  showImmediateFeedback: false,
+  autoAdvance: false,
 };
 
 const INITIAL_STATE: QuizState = {
@@ -211,6 +213,11 @@ export function useQuiz() {
     setState((prev) => {
       const targetId = questionId || prev.questions[prev.currentQuestionIndex]?.id;
       if (!targetId) return prev;
+
+      // Disable overriding responses once selected in immediate feedback mode
+      if (prev.settings.showImmediateFeedback && prev.userResponses[targetId] !== undefined) {
+        return prev;
+      }
 
       return {
         ...prev,

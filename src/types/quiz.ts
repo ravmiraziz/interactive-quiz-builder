@@ -20,6 +20,8 @@ export interface QuizSettings {
   solvingTemplate?: 'slide' | 'scroll'; // slide/classic or scroll/list
   chunkMode?: boolean; // enable solving in customized sequential blocks
   activeChunkIndex?: number; // 0-based chunk/block index
+  showImmediateFeedback?: boolean; // show correct/incorrect answers instantly
+  autoAdvance?: boolean; // auto-advance to the next question on choice select (slide-mode only)
 }
 
 export interface QuizState {

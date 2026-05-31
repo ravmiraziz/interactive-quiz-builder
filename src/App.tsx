@@ -7,7 +7,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TemplateFormatTips from './components/TemplateFormatTips';
 import { 
   Play, Settings, FileSpreadsheet, FileText, ChevronRight, CheckSquare, 
-  Trash2, HelpCircle, ArrowLeft, BrainCircuit, Globe, RefreshCcw, LogOut, Sparkles
+  Trash2, HelpCircle, ArrowLeft, ArrowUp, BrainCircuit, Globe, RefreshCcw, LogOut, Sparkles
 } from 'lucide-react';
 
 export interface ThemeConfig {
@@ -145,6 +145,8 @@ export default function App() {
           solvingTemplate: 'slide',
           chunkMode: false,
           activeChunkIndex: 0,
+          showImmediateFeedback: false,
+          autoAdvance: false,
           ...parsed,
         };
       }
@@ -162,10 +164,36 @@ export default function App() {
       solvingTemplate: 'slide',
       chunkMode: false,
       activeChunkIndex: 0,
+      showImmediateFeedback: false,
+      autoAdvance: false,
     };
   });
 
   const quiz = useQuiz();
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Automatically scroll to top on quiz status changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [quiz.state.status]);
+
+  // Track page scroll to display/hide Scroll to Top trigger
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 350) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Theme auto-syncing
   useEffect(() => {
@@ -250,10 +278,10 @@ export default function App() {
   const t = THEMES[activeTheme];
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${t.bg}`} id="app-root-container">
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden flex flex-col transition-colors duration-300 relative ${t.bg}`} id="app-root-container">
       {/* Ambient background accent */}
       {activeTheme !== 'zinc' && (
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full filter blur-[150px] pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-500/5 rounded-full filter blur-[150px] pointer-events-none overflow-hidden" />
       )}
 
       {/* Primary Navigation Header */}
@@ -725,6 +753,47 @@ export default function App() {
                     </label>
                   </div>
 
+                  {/* Immediate feedback switch */}
+                  <div className={`flex items-center justify-between p-3.5 rounded-xl border ${t.innerBg} ${t.borderColor}`} id="setting-immediate-feedback">
+                    <div>
+                      <p className="font-bold">Darhol tekshirish / Immediate feedback</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Xato/to&apos;g&apos;ri javoblarni shu zahoti ko&apos;rsatish</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={!!settings.showImmediateFeedback}
+                        onChange={(e) => setSettings({ ...settings, showImmediateFeedback: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className={`w-10 h-6 bg-slate-300 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:bg-white ${
+                        activeTheme === 'jade' ? 'peer-checked:bg-emerald-600' :
+                        activeTheme === 'amber' ? 'peer-checked:bg-amber-500' : 'peer-checked:bg-indigo-600'
+                      }`} />
+                    </label>
+                  </div>
+
+                  {/* Auto advance switch */}
+                  <div className={`flex items-center justify-between p-3.5 rounded-xl border ${t.innerBg} ${t.borderColor} ${settings.solvingTemplate === 'scroll' ? 'opacity-50 cursor-not-allowed' : ''}`} id="setting-auto-advance" title={settings.solvingTemplate === 'scroll' ? "Faqat slide rejimida ishlaydi" : ""}>
+                    <div>
+                      <p className="font-bold">Avtomat o&apos;tkazish / Auto-advance</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Javob tanlangach, keyingi savolga o&apos;tkazish (Slideda)</p>
+                    </div>
+                    <label className={`relative inline-flex items-center select-none ${settings.solvingTemplate === 'scroll' ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}>
+                      <input
+                        type="checkbox"
+                        disabled={settings.solvingTemplate === 'scroll'}
+                        checked={!!settings.autoAdvance && settings.solvingTemplate !== 'scroll'}
+                        onChange={(e) => setSettings({ ...settings, autoAdvance: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className={`w-10 h-6 bg-slate-300 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:bg-white ${
+                        activeTheme === 'jade' ? 'peer-checked:bg-emerald-600' :
+                        activeTheme === 'amber' ? 'peer-checked:bg-amber-500' : 'peer-checked:bg-indigo-600'
+                      }`} />
+                    </label>
+                  </div>
+
                   {/* Question Time limits */}
                   <div className={`space-y-2 p-4 rounded-xl border ${t.innerBg} ${t.borderColor}`}>
                     <div className="flex justify-between items-baseline">
@@ -883,6 +952,29 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Scroll to Top button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className={`fixed bottom-6 right-6 z-50 p-3 sm:py-3.5 sm:px-4 rounded-2xl shadow-xl border cursor-pointer hover:scale-[1.08] active:scale-95 transition-all outline-none flex items-center justify-center gap-2 select-none animate-fade-in ${
+            activeTheme === 'zinc'
+              ? 'bg-zinc-900 border-zinc-200 text-white shadow-zinc-400/20'
+              : activeTheme === 'jade'
+                ? 'bg-emerald-600 border-emerald-500/30 text-white shadow-emerald-950/40'
+                : activeTheme === 'amber'
+                  ? 'bg-amber-400 border-amber-500/30 text-stone-950 font-black shadow-amber-950/45'
+                  : 'bg-indigo-600 border-indigo-500/30 text-white shadow-indigo-950/40'
+          }`}
+          title="Yuqoriga chiqish / Scroll to Top"
+          id="btn-scroll-to-top"
+        >
+          <ArrowUp className="w-4 h-4 text-current shrink-0" />
+          <span className="hidden sm:inline font-sans font-bold text-[10px] tracking-wider uppercase">
+            Yuqoriga / Top
+          </span>
+        </button>
+      )}
     </div>
   );
 }

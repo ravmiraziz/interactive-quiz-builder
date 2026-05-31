@@ -85,6 +85,70 @@ export default function QuizWrapper({
       ? 'bg-amber-500/10 border-amber-500/25 text-amber-400 font-bold'
       : 'bg-indigo-500/10 border-indigo-500/25 text-indigo-400';
 
+  const isZinc = theme?.bg?.includes('zinc');
+
+  const getOptionStyles = (option: string, question: Question, userResponse: string | undefined) => {
+    const isSelected = userResponse === option;
+    const hasBeenAnswered = userResponse !== undefined;
+
+    if (settings.showImmediateFeedback && hasBeenAnswered) {
+      const isCorrectOption = option === question.correctAnswer;
+      const isIncorrectSelection = isSelected && !isCorrectOption;
+
+      if (isCorrectOption) {
+        return {
+          card: isZinc
+            ? 'bg-emerald-100/90 border-emerald-500 text-emerald-900 font-extrabold shadow-sm'
+            : 'bg-emerald-500/15 border-emerald-500/60 text-emerald-300 md:text-emerald-250 font-bold',
+          indicator: 'bg-emerald-500 border-emerald-600 text-white shadow-md'
+        };
+      } else if (isIncorrectSelection) {
+        return {
+          card: isZinc
+            ? 'bg-rose-100/90 border-rose-500 text-rose-900 font-extrabold shadow-sm animate-shake'
+            : 'bg-rose-500/15 border-rose-500/60 text-rose-300 md:text-rose-250 font-bold',
+          indicator: 'bg-rose-500 border-rose-600 text-white shadow-md'
+        };
+      } else {
+        return {
+          card: 'opacity-40 border-slate-500/5 text-slate-400 pointer-events-none',
+          indicator: 'bg-slate-500/5 text-slate-550 border-slate-500/10'
+        };
+      }
+    }
+
+    return {
+      card: isSelected ? t.optionSelected : t.optionUnselected,
+      indicator: isSelected
+        ? t.accentColor.includes('emerald')
+          ? 'bg-emerald-600 border-emerald-555 text-white shadow-md'
+          : t.accentColor.includes('amber')
+            ? 'bg-amber-500 border-amber-444 text-stone-950 font-bold'
+            : 'bg-indigo-600 border-indigo-555 text-white shadow-md'
+        : `${t.innerBg} text-slate-400 border-slate-700/20 group-hover:border-slate-500`
+    };
+  };
+
+  const handleSelectOptionWithAutoAdvance = (option: string, questionId?: string) => {
+    const targetId = questionId || currentQuestion.id;
+
+    // Reject changes if immediate feedback is active and answer was already set
+    if (settings.showImmediateFeedback && userResponses[targetId] !== undefined) {
+      return;
+    }
+
+    selectOption(option, targetId);
+
+    if (settings.autoAdvance && settings.solvingTemplate === 'slide') {
+      const delay = settings.showImmediateFeedback ? 1000 : 300;
+      setTimeout(() => {
+        if (currentQuestionIndex < questions.length - 1) {
+          nextQuestion();
+        }
+      }, delay);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start font-sans" id="quiz-wrapper-layout">
       {/* Active Question Panel */}
@@ -166,28 +230,24 @@ export default function QuizWrapper({
                       <div className="space-y-2.5">
                         {q.options.map((option, oIdx) => {
                           const prefix = String.fromCharCode(65 + oIdx);
-                          const isOptSelected = qResponse === option;
+                          const styles = getOptionStyles(option, q, qResponse);
+                          const hasBeenAnswered = qResponse !== undefined;
 
                           return (
                             <button
                               key={oIdx}
+                              disabled={hasBeenAnswered && settings.showImmediateFeedback}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                selectOption(option, q.id);
+                                handleSelectOptionWithAutoAdvance(option, q.id);
                                 jumpToQuestion(idx); // keep parent state focused index aligned
                               }}
                               className={`w-full text-left font-sans flex items-center gap-3 w-full p-3.5 rounded-xl border transition-all duration-200 cursor-pointer group ${
-                                isOptSelected ? t.optionSelected : t.optionUnselected
+                                styles.card
                               }`}
                             >
                               <span className={`w-7 h-7 rounded-lg font-mono text-[11px] font-bold flex items-center justify-center shrink-0 border transition-colors ${
-                                isOptSelected
-                                  ? t.accentColor.includes('emerald')
-                                    ? 'bg-emerald-600 border-emerald-520 text-white shadow'
-                                    : t.accentColor.includes('amber')
-                                      ? 'bg-amber-500 border-amber-420 text-stone-950 font-bold'
-                                      : 'bg-indigo-600 border-indigo-525 text-white shadow'
-                                  : `${t.innerBg} text-slate-400 border-slate-700/20 group-hover:border-slate-500`
+                                styles.indicator
                               }`}>
                                 {prefix}
                               </span>
@@ -267,25 +327,21 @@ export default function QuizWrapper({
               <div className="space-y-4" id="options-choices-list">
                 {currentQuestion.options.map((option, idx) => {
                   const prefixLetter = String.fromCharCode(65 + idx); // A, B, C, D...
-                  const isSelected = currentQuestionResponse === option;
+                  const styles = getOptionStyles(option, currentQuestion, currentQuestionResponse);
+                  const hasBeenAnswered = currentQuestionResponse !== undefined;
 
                   return (
                     <button
                       key={idx}
-                      onClick={() => selectOption(option)}
+                      disabled={hasBeenAnswered && settings.showImmediateFeedback}
+                      onClick={() => handleSelectOptionWithAutoAdvance(option)}
                       className={`w-full text-left font-sans flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 cursor-pointer group ${
-                        isSelected ? t.optionSelected : t.optionUnselected
+                        styles.card
                       }`}
                       id={`choice-option-${prefixLetter}`}
                     >
                       <span className={`w-8 h-8 rounded-xl font-mono text-xs font-bold flex items-center justify-center shrink-0 border transition-colors ${
-                        isSelected
-                          ? t.accentColor.includes('emerald')
-                            ? 'bg-emerald-600 border-emerald-555 text-white shadow-md'
-                            : t.accentColor.includes('amber')
-                              ? 'bg-amber-500 border-amber-444 text-stone-950 font-bold'
-                              : 'bg-indigo-600 border-indigo-555 text-white shadow-md'
-                          : `${t.innerBg} text-slate-400 border-slate-700/20 group-hover:border-slate-500`
+                        styles.indicator
                       }`}>
                         {prefixLetter}
                       </span>
