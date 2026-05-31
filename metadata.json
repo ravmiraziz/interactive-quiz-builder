@@ -1,0 +1,6 @@
+{
+  "name": "Interactive Quiz Builder",
+  "description": "Upload XLSX or DOCX test templates to instantly construct and run interactive quizzes with custom timers, score breakdowns, and answers review.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
